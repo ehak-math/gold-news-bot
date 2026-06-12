@@ -152,12 +152,23 @@ async function runAllChecks() {
   await checkSquawk();
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 if (RUN_ONCE) {
-  // GitHub Actions / external cron: run once, then exit.
-  runAllChecks().then(() => {
+  // GitHub Actions / external cron. GitHub's schedule can't fire faster than
+  // every 5 min, so we loop a few times inside one run to check more often.
+  const iterations = parseInt(process.env.RUN_ITERATIONS || "1", 10);
+  const intervalMs = parseInt(process.env.RUN_INTERVAL_MS || "60000", 10);
+
+  (async () => {
+    for (let i = 0; i < iterations; i++) {
+      if (i > 0) await sleep(intervalMs);
+      console.log(`Pass ${i + 1}/${iterations}`);
+      await runAllChecks();
+    }
     console.log("Run-once complete.");
     process.exit(0);
-  });
+  })();
 } else {
   // Long-running host (VPS / home machine): self-schedule every 5 minutes.
   cron.schedule("*/5 * * * *", runAllChecks);

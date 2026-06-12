@@ -14,7 +14,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -39,6 +39,9 @@ jobs:
       - name: Run checks once
         env:
           RUN_ONCE: "true"
+          # 5 passes, one per minute = effective ~1-minute checks within the run.
+          RUN_ITERATIONS: "5"
+          RUN_INTERVAL_MS: "60000"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
