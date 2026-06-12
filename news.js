@@ -1,6 +1,7 @@
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const { isRelevant, impactOf } = require("./filter");
 
 // Finnhub general market news (free key: https://finnhub.io/register).
 const FINNHUB_KEY = process.env.FINNHUB_API_KEY;
@@ -9,19 +10,6 @@ const NEWS_URL = "https://finnhub.io/api/v1/news?category=general";
 // Where we remember already-sent headline ids across restarts.
 const SEEN_FILE = path.join(__dirname, "seen.json");
 const MAX_SEEN = 500;
-
-// Only forward headlines that matter for gold (XAU/USD).
-const KEYWORDS = [
-  // Gold itself + USD / monetary-policy drivers
-  "gold", "xau", "bullion", "fed", "fomc", "powell", "rate", "inflation",
-  "cpi", "ppi", "pce", "dollar", "dxy", "treasury", "yield",
-  // Safe-haven / risk drivers
-  "safe haven", "recession", "war", "geopolit", "iran", "israel", "russia",
-  "ukraine", "tariff", "sanction", "opec", "oil",
-  // Major US economic data
-  "nfp", "non-farm", "nonfarm", "unemployment", "payroll",
-  "gdp", "retail sales", "pmi", "ism",
-];
 
 // Don't flood the chat in a single cycle.
 const MAX_PER_RUN = 5;
@@ -49,24 +37,6 @@ function saveSeen() {
   } catch (err) {
     console.error("Failed to save seen.json:", err.message);
   }
-}
-
-function isRelevant(headline) {
-  const text = headline.toLowerCase();
-  return KEYWORDS.some((k) => text.includes(k));
-}
-
-// Top-tier gold movers. A matched headline with any of these is treated as
-// High impact; otherwise Medium. (Inferred — these feeds have no impact field.)
-const HIGH_IMPACT = [
-  "fed", "fomc", "powell", "rate", "cpi", "ppi", "pce", "inflation",
-  "nfp", "non-farm", "nonfarm", "payroll", "gold", "xau", "dxy", "dollar",
-  "treasury", "yield", "war", "iran", "israel", "tariff", "sanction",
-];
-
-function impactOf(text) {
-  const lower = text.toLowerCase();
-  return HIGH_IMPACT.some((k) => lower.includes(k)) ? "High" : "Medium";
 }
 
 function formatCambodiaTime(unixSeconds) {

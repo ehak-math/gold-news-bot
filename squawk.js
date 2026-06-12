@@ -1,6 +1,7 @@
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const { isRelevant, impactOf } = require("./filter");
 
 // FinancialJuice is one of the sources ForexFactory aggregates in "Hot Stories".
 // Free squawk-style RSS, no key required.
@@ -9,19 +10,6 @@ const FEED_URL = "https://www.financialjuice.com/feed.ashx?xy=rss";
 const SEEN_FILE = path.join(__dirname, "seen-squawk.json");
 const MAX_SEEN = 500;
 const MAX_PER_RUN = 5;
-
-// Forward only gold-relevant squawks (same idea as the Finnhub filter).
-const KEYWORDS = [
-  // Gold itself + USD / monetary-policy drivers
-  "gold", "xau", "bullion", "fed", "fomc", "powell", "rate", "inflation",
-  "cpi", "ppi", "pce", "dollar", "dxy", "treasury", "yield",
-  // Safe-haven / risk drivers
-  "safe haven", "recession", "war", "geopolit", "iran", "israel", "russia",
-  "ukraine", "tariff", "sanction", "opec", "oil",
-  // Major US economic data
-  "nfp", "non-farm", "nonfarm", "unemployment", "payroll",
-  "gdp", "retail sales", "pmi", "ism",
-];
 
 function loadSeen() {
   try {
@@ -66,24 +54,6 @@ function parseItems(xml) {
     link: tag(m[1], "link"),
     pubDate: tag(m[1], "pubDate"),
   }));
-}
-
-function isRelevant(title) {
-  const text = title.toLowerCase();
-  return KEYWORDS.some((k) => text.includes(k));
-}
-
-// Top-tier gold movers. A matched headline with any of these is treated as
-// High impact; otherwise Medium. (Inferred — these feeds have no impact field.)
-const HIGH_IMPACT = [
-  "fed", "fomc", "powell", "rate", "cpi", "ppi", "pce", "inflation",
-  "nfp", "non-farm", "nonfarm", "payroll", "gold", "xau", "dxy", "dollar",
-  "treasury", "yield", "war", "iran", "israel", "tariff", "sanction",
-];
-
-function impactOf(title) {
-  const text = title.toLowerCase();
-  return HIGH_IMPACT.some((k) => text.includes(k)) ? "High" : "Medium";
 }
 
 function escapeHtml(text = "") {
