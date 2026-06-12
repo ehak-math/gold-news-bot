@@ -1,8 +1,13 @@
 require("dotenv").config();
 const axios = require("axios");
 const cron = require("node-cron");
+const fs = require("fs");
+const path = require("path");
 const { getBreakingNews } = require("./news");
 const { getSquawkNews } = require("./squawk");
+
+// When true, run every check once and exit (used by GitHub Actions / cron).
+const RUN_ONCE = process.env.RUN_ONCE === "true";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -17,8 +22,27 @@ const WATCH_IMPACTS = ["High", "Medium"];
 // Warn this many minutes before the event fires.
 const LEAD_MINUTES = 30;
 
-// Remember which events we already alerted so we don't repeat.
-const alerted = new Set();
+// Remember which events we already alerted (persisted so run-once mode
+// doesn't re-fire the same event on every invocation).
+const ALERTED_FILE = path.join(__dirname, "alerted.json");
+
+function loadAlerted() {
+  try {
+    return new Set(JSON.parse(fs.readFileSync(ALERTED_FILE, "utf8")));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveAlerted() {
+  try {
+    fs.writeFileSync(ALERTED_FILE, JSON.stringify([...alerted].slice(-500)));
+  } catch (err) {
+    console.error("Failed to save alerted.json:", err.message);
+  }
+}
+
+const alerted = loadAlerted();
 
 async function sendTelegram(message) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
@@ -89,6 +113,7 @@ async function checkNews() {
       if (minutesUntil <= LEAD_MINUTES && minutesUntil >= 0) {
         await sendTelegram(buildMessage(ev, minutesUntil));
         alerted.add(id);
+        saveAlerted();
         console.log(`Alert sent: ${ev.title} (in ${minutesUntil} min)`);
       }
     }
@@ -121,14 +146,20 @@ async function checkSquawk() {
   }
 }
 
-// Run every 5 minutes
-cron.schedule("*/5 * * * *", () => {
-  checkNews();
-  checkBreakingNews();
-  checkSquawk();
-});
+async function runAllChecks() {
+  await checkNews();
+  await checkBreakingNews();
+  await checkSquawk();
+}
 
-// Run once on startup
-checkNews();
-checkBreakingNews();
-checkSquawk();
+if (RUN_ONCE) {
+  // GitHub Actions / external cron: run once, then exit.
+  runAllChecks().then(() => {
+    console.log("Run-once complete.");
+    process.exit(0);
+  });
+} else {
+  // Long-running host (VPS / home machine): self-schedule every 5 minutes.
+  cron.schedule("*/5 * * * *", runAllChecks);
+  runAllChecks();
+}

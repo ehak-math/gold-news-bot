@@ -1,0 +1,45 @@
+name: gold-news-bot
+
+on:
+  schedule:
+    # Every 5 minutes (GitHub may delay or batch these — not exact).
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # allow manual "Run workflow" for testing
+
+# Don't pile up overlapping runs.
+concurrency:
+  group: gold-news-bot
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      # Restore the "already sent" state from the previous run so we don't
+      # repeat alerts. A new cache is saved at the end of each run.
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: |
+            seen.json
+            seen-squawk.json
+            alerted.json
+          key: bot-state-${{ github.run_id }}
+          restore-keys: bot-state-
+
+      - name: Run checks once
+        env:
+          RUN_ONCE: "true"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: node index.js

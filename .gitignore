@@ -3,4 +3,5 @@ node_modules/
 .env.local
 seen.json
 seen-squawk.json
+alerted.json
 npm-debug.log*
