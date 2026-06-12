@@ -12,11 +12,14 @@ const MAX_SEEN = 500;
 
 // Only forward headlines that matter for gold (XAU/USD).
 const KEYWORDS = [
-  "gold", "fed", "fomc", "powell", "rate", "inflation", "cpi", "ppi",
-  "dollar", "treasury", "yield", "war", "iran", "israel", "russia",
-  "ukraine", "trump", "tariff", "sanction", "opec", "oil", "geopolit",
+  // Gold itself + USD / monetary-policy drivers
+  "gold", "xau", "bullion", "fed", "fomc", "powell", "rate", "inflation",
+  "cpi", "ppi", "pce", "dollar", "dxy", "treasury", "yield",
+  // Safe-haven / risk drivers
+  "safe haven", "recession", "war", "geopolit", "iran", "israel", "russia",
+  "ukraine", "tariff", "sanction", "opec", "oil",
   // Major US economic data
-  "nfp", "non-farm", "nonfarm", "unemployment", "payroll", "pce",
+  "nfp", "non-farm", "nonfarm", "unemployment", "payroll",
   "gdp", "retail sales", "pmi", "ism",
 ];
 
