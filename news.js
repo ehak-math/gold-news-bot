@@ -56,6 +56,19 @@ function isRelevant(headline) {
   return KEYWORDS.some((k) => text.includes(k));
 }
 
+// Top-tier gold movers. A matched headline with any of these is treated as
+// High impact; otherwise Medium. (Inferred — these feeds have no impact field.)
+const HIGH_IMPACT = [
+  "fed", "fomc", "powell", "rate", "cpi", "ppi", "pce", "inflation",
+  "nfp", "non-farm", "nonfarm", "payroll", "gold", "xau", "dxy", "dollar",
+  "treasury", "yield", "war", "iran", "israel", "tariff", "sanction",
+];
+
+function impactOf(text) {
+  const lower = text.toLowerCase();
+  return HIGH_IMPACT.some((k) => lower.includes(k)) ? "High" : "Medium";
+}
+
 function formatCambodiaTime(unixSeconds) {
   return new Date(unixSeconds * 1000).toLocaleString("en-GB", {
     timeZone: "Asia/Phnom_Penh",
@@ -81,13 +94,16 @@ function shorten(text = "", max = 220) {
 function buildMessage(item) {
   const title = escapeHtml(item.headline);
   const summary = item.summary ? escapeHtml(shorten(item.summary)) : "";
+  const impact = impactOf(`${item.headline} ${item.summary}`);
+  const icon = impact === "High" ? "🔴" : "🟠";
   const lines = [
-    "📰 <b>BREAKING MARKET NEWS</b>",
+    `${icon} <b>${impact.toUpperCase()} IMPACT — MARKET NEWS</b>`,
     "",
     `<b>${title}</b>`,
     "",
     `🕒 ${formatCambodiaTime(item.datetime)} (Cambodia)`,
     `📡 Source: ${escapeHtml(item.source)}`,
+    `📊 Impact: ${impact} (gold)`,
   ];
   if (summary) lines.push("", summary);
   lines.push("", `🔗 ${item.url}`);

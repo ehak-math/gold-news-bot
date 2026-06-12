@@ -73,6 +73,19 @@ function isRelevant(title) {
   return KEYWORDS.some((k) => text.includes(k));
 }
 
+// Top-tier gold movers. A matched headline with any of these is treated as
+// High impact; otherwise Medium. (Inferred — these feeds have no impact field.)
+const HIGH_IMPACT = [
+  "fed", "fomc", "powell", "rate", "cpi", "ppi", "pce", "inflation",
+  "nfp", "non-farm", "nonfarm", "payroll", "gold", "xau", "dxy", "dollar",
+  "treasury", "yield", "war", "iran", "israel", "tariff", "sanction",
+];
+
+function impactOf(title) {
+  const text = title.toLowerCase();
+  return HIGH_IMPACT.some((k) => text.includes(k)) ? "High" : "Medium";
+}
+
 function escapeHtml(text = "") {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -92,12 +105,15 @@ function formatCambodiaTime(pubDate) {
 }
 
 function buildMessage(item) {
+  const impact = impactOf(item.title);
+  const icon = impact === "High" ? "🔴" : "🟠";
   return [
-    "⚡ <b>SQUAWK — FinancialJuice</b>",
+    `${icon} <b>${impact.toUpperCase()} IMPACT — SQUAWK</b>`,
     "",
     `<b>${escapeHtml(item.title)}</b>`,
     "",
     `🕒 ${formatCambodiaTime(item.pubDate)} (Cambodia)`,
+    `📊 Impact: ${impact} (gold)`,
     "",
     `🔗 ${item.link}`,
   ].join("\n");
